@@ -72,7 +72,7 @@ function handleCallbackQuery(PDO $pdo, array $config, array $callback): void
     }
 
     if(preg_match('/^friend:(\d+)$/', $data, $matches)) {
-        $friend = findFriendById($pdo, (int) $matches[1]);
+        $friend = findFriendById($pdo, (int)$matches[1]);
 
         if(!$friend) {
             sendTelegramMessage($config, $chat_id, 'Друг не найден.');
@@ -80,12 +80,12 @@ function handleCallbackQuery(PDO $pdo, array $config, array $callback): void
         }
 
         deleteTelegramMessage($config, $chat_id, $message_id);
-        sendFriendActionsKeyboard($config, $chat_id, (int) $friend['id'], $friend['name']);
+        sendFriendActionsKeyboard($config, $chat_id, (int)$friend['id'], $friend['name']);
         return;
     }
 
     if(preg_match('/^phrases:(\d+):(random|all|suggest)$/', $data, $matches)) {
-        $friend = findFriendById($pdo, (int) $matches[1]);
+        $friend = findFriendById($pdo, (int)$matches[1]);
 
         if(!$friend) {
             sendTelegramMessage($config, $chat_id, 'Друг не найден.');
@@ -94,7 +94,7 @@ function handleCallbackQuery(PDO $pdo, array $config, array $callback): void
 
         if($matches[2] === 'random') {
             deleteTelegramMessage($config, $chat_id, $message_id);
-            sendRandomPhrase($pdo, $config, $chat_id, (int) $friend['id'], $friend['name']);
+            sendRandomPhrase($pdo, $config, $chat_id, (int)$friend['id'], $friend['name']);
             return;
         }
 
@@ -102,17 +102,17 @@ function handleCallbackQuery(PDO $pdo, array $config, array $callback): void
             deleteTelegramMessage($config, $chat_id, $message_id);
             $response = sendTelegramMessage($config, $chat_id, "Напиши новую фразу для {$friend['name']} одним сообщением.");
             $prompt_message_id = $response['result']['message_id'] ?? null;
-            setUserState($pdo, $chat_id, 'add_phrase', (int) $friend['id'], $prompt_message_id);
+            setUserState($pdo, $chat_id, 'add_phrase', (int)$friend['id'], $prompt_message_id);
             return;
         }
 
         deleteTelegramMessage($config, $chat_id, $message_id);
-        sendAllPhrases($pdo, $config, $chat_id, (int) $friend['id'], $friend['name']);
+        sendAllPhrases($pdo, $config, $chat_id, (int)$friend['id'], $friend['name']);
         return;
     }
 
     if(preg_match('/^suggestion:(\d+):(approve|reject)$/', $data, $matches)) {
-        handleSuggestionReview($pdo, $config, $chat_id, $message_id, (int) $matches[1], $matches[2]);
+        handleSuggestionReview($pdo, $config, $chat_id, $message_id, (int)$matches[1], $matches[2]);
     }
 }
 
@@ -154,26 +154,31 @@ function sendFriendActionsKeyboard(array $config, $chat_id, int $friend_id, stri
         $config,
         $chat_id,
         "Что показать для {$friend_name}?",
-        [
-            'inline_keyboard' => [
-                [
-                    ['text' => 'Случайная фраза', 'callback_data' => "phrases:{$friend_id}:random"],
-                    ['text' => 'Все фразы', 'callback_data' => "phrases:{$friend_id}:all"],
-                ],
-                [
-                    ['text' => 'Предложить фразу', 'callback_data' => "phrases:{$friend_id}:suggest"],
-                ],
-                [
-                    ['text' => 'Выбрать другого', 'callback_data' => 'friends:list'],
-                ],
-            ],
-        ]
+        getFriendActionsKeyboard($friend_id)
     );
+}
+
+function getFriendActionsKeyboard(int $friend_id): array
+{
+    return [
+        'inline_keyboard' => [
+            [
+                ['text' => 'Случайную', 'callback_data' => "phrases:{$friend_id}:random"],
+                ['text' => 'Все фразы', 'callback_data' => "phrases:{$friend_id}:all"],
+            ],
+            [
+                ['text' => 'Предложить фразу', 'callback_data' => "phrases:{$friend_id}:suggest"],
+            ],
+            [
+                ['text' => 'К списку друзей', 'callback_data' => 'friends:list'],
+            ],
+        ],
+    ];
 }
 
 function handlePhraseSuggestion(PDO $pdo, array $config, $chat_id, array $state, string $text): void
 {
-    $friend = findFriendById($pdo, (int) $state['friend_id']);
+    $friend = findFriendById($pdo, (int)$state['friend_id']);
     deleteTelegramMessage($config, $chat_id, $state['bot_message_id'] ?? null);
     clearUserState($pdo, $chat_id);
 
@@ -190,7 +195,7 @@ function handlePhraseSuggestion(PDO $pdo, array $config, $chat_id, array $state,
         return;
     }
 
-    $suggestion_id = createPhraseSuggestion($pdo, (int) $friend['id'], $text, (int) $chat_id);
+    $suggestion_id = createPhraseSuggestion($pdo, (int)$friend['id'], $text, (int)$chat_id);
     $from = "chat_id={$chat_id}";
     $message = "Новая предложенная фраза #{$suggestion_id}\n\nДруг: {$friend['name']}\nОт: {$from}\n\n{$text}";
 
@@ -212,9 +217,9 @@ function handlePhraseSuggestion(PDO $pdo, array $config, $chat_id, array $state,
 
 function handleSuggestionReview(PDO $pdo, array $config, $chat_id, $message_id, int $suggestion_id, string $action): void
 {
-    $admin_chat_id = (string) ($config['admin_chat_id'] ?? '');
+    $admin_chat_id = (string)($config['admin_chat_id'] ?? '');
 
-    if($admin_chat_id === '' || (string) $chat_id !== $admin_chat_id) {
+    if($admin_chat_id === '' || (string)$chat_id !== $admin_chat_id) {
         sendTelegramMessage($config, $chat_id, 'Это действие доступно только администратору.');
         return;
     }
@@ -233,7 +238,7 @@ function handleSuggestionReview(PDO $pdo, array $config, $chat_id, $message_id, 
 
     if($action === 'approve') {
         $stmt = $pdo->prepare('INSERT INTO phrases (friend_id, text) VALUES (?, ?)');
-        $stmt->execute([(int) $suggestion['friend_id'], $suggestion['text']]);
+        $stmt->execute([(int)$suggestion['friend_id'], $suggestion['text']]);
         updateSuggestionStatus($pdo, $suggestion_id, 'approved');
         deleteTelegramMessage($config, $chat_id, $message_id);
 
@@ -262,7 +267,8 @@ function sendRandomPhrase(PDO $pdo, array $config, $chat_id, int $friend_id, str
     sendTelegramMessage(
         $config,
         $chat_id,
-        $phrase ? "{$friend_name}:\n{$phrase}" : "У {$friend_name} пока нет фраз."
+        $phrase ? "{$friend_name}:\n{$phrase}" : "У {$friend_name} пока нет фраз.",
+        getFriendActionsKeyboard($friend_id)
     );
 }
 
@@ -277,7 +283,7 @@ function sendAllPhrases(PDO $pdo, array $config, $chat_id, int $friend_id, strin
     $phrases = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if(count($phrases) === 0) {
-        sendTelegramMessage($config, $chat_id, "У {$friend_name} пока нет фраз.");
+        sendTelegramMessage($config, $chat_id, "У {$friend_name} пока нет фраз.", getFriendActionsKeyboard($friend_id));
         return;
     }
 
@@ -287,8 +293,16 @@ function sendAllPhrases(PDO $pdo, array $config, $chat_id, int $friend_id, strin
         $lines[] = ($index + 1) . '. ' . $phrase;
     }
 
-    foreach(splitTelegramMessage(implode("\n\n", $lines)) as $chunk) {
-        sendTelegramMessage($config, $chat_id, $chunk);
+    $chunks = splitTelegramMessage(implode("\n\n", $lines));
+    $lastIndex = count($chunks) - 1;
+
+    foreach($chunks as $index => $chunk) {
+        sendTelegramMessage(
+            $config,
+            $chat_id,
+            $chunk,
+            $index === $lastIndex ? getFriendActionsKeyboard($friend_id) : null
+        );
     }
 }
 
@@ -309,7 +323,7 @@ function createPhraseSuggestion(PDO $pdo, int $friend_id, string $text, int $sug
     ');
     $stmt->execute([$friend_id, $text, $suggester_chat_id]);
 
-    return (int) $pdo->lastInsertId();
+    return (int)$pdo->lastInsertId();
 }
 
 function findSuggestionById(PDO $pdo, int $suggestion_id): ?array

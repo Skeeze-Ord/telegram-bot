@@ -1,0 +1,1 @@
+wsl --cd /home/arman/projects/telegram-bot docker compose exec php php public/scripts/poll.php
